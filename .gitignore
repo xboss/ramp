@@ -2,7 +2,6 @@
 .DS_Store
 .vscode
 *.log
-*.conf
 *.sh
 out
 build
