@@ -70,13 +70,22 @@ server_t *init_server(char *bind_ip, uint16_t port, char *key, char *iv) {
     server->iv = iv;
     server->mac_talbe = NULL;
 
-    // TODO: mac table
-
     return server;
 }
 
 void free_server(server_t *server) {
-    // TODO:
+    if (!server) {
+        return;
+    }
+
+    mac_talbe_t *mac, *tmp;
+    HASH_ITER(hh, server->mac_talbe, mac, tmp) {
+        HASH_DEL(server->mac_talbe, mac);
+        _FREE_IF(mac);
+    }
+    server->mac_talbe = NULL;
+
+    _FREE_IF(server);
 }
 
 void run_server(server_t *server) {

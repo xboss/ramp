@@ -147,6 +147,8 @@ bool start_server() {
 
     run_server(server);
 
+    free_server(server);
+
     return true;
 }
 
