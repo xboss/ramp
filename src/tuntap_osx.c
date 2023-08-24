@@ -1,5 +1,5 @@
 
-#include "tap.h"
+#include "tuntap.h"
 
 #ifdef __APPLE__
 
@@ -21,7 +21,7 @@
 
 static const char dev_name_prefix[] = "utun";
 
-int tap_open(char *dev_name, int name_len) {
+int tuntap_open(char *dev_name, int name_len) {
     struct sockaddr_ctl sc;
     struct ctl_info ctlInfo;
     int fd;
@@ -76,31 +76,31 @@ int tap_open(char *dev_name, int name_len) {
     return fd;
 }
 
-// void tap_setup(char *dev_name, char *dev_ip, char *dev_mask) {
-//     char buf[256] = {0};
-//     snprintf(buf, sizeof(buf), "ifconfig %s %s %s", dev_name, dev_ip, dev_ip);
-//     printf("run: %s\n", buf);
-//     system(buf);
+void tuntap_setup(char *dev_name, char *dev_ip, char *dev_mask) {
+    char buf[256] = {0};
+    snprintf(buf, sizeof(buf), "ifconfig %s %s %s", dev_name, dev_ip, dev_ip);
+    printf("run: %s\n", buf);
+    system(buf);
 
-//     struct in_addr ip_n;
-//     inet_aton(dev_ip, &ip_n);
-//     struct in_addr ip_mask;
-//     inet_aton(dev_mask, &ip_mask);
-//     ip_n.s_addr = ip_n.s_addr & ip_mask.s_addr;
+    struct in_addr ip_n;
+    inet_aton(dev_ip, &ip_n);
+    struct in_addr ip_mask;
+    inet_aton(dev_mask, &ip_mask);
+    ip_n.s_addr = ip_n.s_addr & ip_mask.s_addr;
 
-//     memset(buf, 0, 256);
-//     snprintf(buf, sizeof(buf), "route -n add -net %s -netmask %s %s", inet_ntoa(ip_n), dev_mask, dev_ip);
-//     printf("run: %s\n", buf);
-//     system(buf);
+    memset(buf, 0, 256);
+    snprintf(buf, sizeof(buf), "route -n add -net %s -netmask %s %s", inet_ntoa(ip_n), dev_mask, dev_ip);
+    printf("run: %s\n", buf);
+    system(buf);
 
-//     // ifconfig utun5 mtu 1400
-//     memset(buf, 0, 256);
-//     snprintf(buf, sizeof(buf), "ifconfig %s mtu 1500", dev_name);
-//     printf("run: %s\n", buf);
-//     system(buf);
-// }
+    // ifconfig utun5 mtu 1400
+    memset(buf, 0, 256);
+    snprintf(buf, sizeof(buf), "ifconfig %s mtu 1500", dev_name);
+    printf("run: %s\n", buf);
+    system(buf);
+}
 
-int tap_read(int fd, char *buf, int len) {
+int tuntap_read(int fd, char *buf, int len) {
     u_int32_t type;
     struct iovec iv[2];
 
@@ -116,7 +116,7 @@ int tap_read(int fd, char *buf, int len) {
     return r - sizeof(type);
 }
 
-int tap_write(int fd, char *buf, int len) {
+int tuntap_write(int fd, char *buf, int len) {
     u_int32_t type = htonl(AF_INET);  // IPV4
     struct iovec iv[2];
 

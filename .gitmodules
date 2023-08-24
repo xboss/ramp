@@ -1,0 +1,3 @@
+[submodule "src/3rd/EasyTCP"]
+        path = src/3rd/EasyTCP
+        url = https://github.com/xboss/EasyTCP.git
