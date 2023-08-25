@@ -5,6 +5,7 @@
 *.sh
 out
 build
+test
 
 # Prerequisites
 *.d
