@@ -16,6 +16,8 @@ typedef struct {
     char server_ip[INET_ADDRSTRLEN + 1];
     uint16_t server_port;
 
+    char tuntap_ip[INET_ADDRSTRLEN + 1];
+    char tuntap_mask[INET_ADDRSTRLEN + 1];
 } ramp_t;
 
 static ramp_t *ctx = NULL;
@@ -62,6 +64,14 @@ static void fill_conf(const char *k, const char *v) {
         ctx->server_port = (uint16_t)atoi(v);
     } else if (strcmp("password", k) == 0) {
         char_to_hex(v, KEY_LEN / 2, ctx->key);
+    } else if (strcmp("tuntap_ip", k) == 0) {
+        if (len <= INET_ADDRSTRLEN) {
+            memcpy(ctx->tuntap_ip, v, len);
+        }
+    } else if (strcmp("tuntap_mask", k) == 0) {
+        if (len <= INET_ADDRSTRLEN) {
+            memcpy(ctx->tuntap_mask, v, len);
+        }
     }
 }
 
@@ -104,6 +114,8 @@ static bool load_conf(const char *conf_file) {
     printf("server_ip:%s\n", ctx->server_ip);
     printf("server_port:%u\n", ctx->server_port);
     printf("key:%s\n", ctx->key);
+    printf("tuntap_ip:%s\n", ctx->tuntap_ip);
+    printf("tuntap_mask:%s\n", ctx->tuntap_mask);
 
     return true;
 }
@@ -114,7 +126,7 @@ static bool load_conf(const char *conf_file) {
 
 bool start_client() {
     // init
-    client_t *cli = init_client(ctx->server_ip, ctx->server_port, ctx->key, ctx->iv);
+    client_t *cli = init_client(ctx->server_ip, ctx->server_port, ctx->key, ctx->iv, ctx->tuntap_ip, ctx->tuntap_mask);
     if (!cli) {
         return false;
     }
@@ -171,6 +183,9 @@ int main(int argc, char const *argv[]) {
         start_client();
     } else if (ctx->mode == SERVER_MODE) {
         start_server();
+    } else {
+        LOG_E("mode error %d", ctx->mode);
+        return 1;
     }
 
     return 0;
