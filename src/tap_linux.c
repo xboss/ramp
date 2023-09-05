@@ -40,28 +40,28 @@ int tap_open(char *dev_name, int name_len) {
     return fd;
 }
 
-// void tap_setup(char *dev_name, char *dev_ip, char *dev_mask) {
-//     char buf[256] = {0};
-//     snprintf(buf, sizeof(buf), "ip addr add %s/24 dev %s", dev_ip, dev_name);
-//     printf("run: %s\n", buf);
-//     system(buf);
+void tap_setup(char *dev_name, char *dev_ip, char *dev_mask) {
+    char buf[256] = {0};
+    // snprintf(buf, sizeof(buf), "ip addr add %s/24 dev %s", dev_ip, dev_name);
+    // printf("run: %s\n", buf);
+    // system(buf);
 
-//     memset(buf, 0, 256);
-//     snprintf(buf, sizeof(buf), "ifconfig %s netmask %s", dev_name, dev_mask);
-//     printf("run: %s\n", buf);
-//     system(buf);
+    // memset(buf, 0, 256);
+    snprintf(buf, sizeof(buf), "ifconfig %s %s netmask %s", dev_name, dev_ip, dev_mask);
+    printf("run: %s\n", buf);
+    system(buf);
 
-//     // ifconfig utun5 mtu 1400
-//     memset(buf, 0, 256);
-//     snprintf(buf, sizeof(buf), "ifconfig %s mtu 1500", dev_name);
-//     printf("run: %s\n", buf);
-//     system(buf);
+    // ifconfig mtu 1400
+    memset(buf, 0, 256);
+    snprintf(buf, sizeof(buf), "ifconfig %s mtu 1400", dev_name);
+    printf("run: %s\n", buf);
+    system(buf);
 
-//     memset(buf, 0, 256);
-//     snprintf(buf, sizeof(buf), "ip link set %s up", dev_name);
-//     printf("run: %s\n", buf);
-//     system(buf);
-// }
+    memset(buf, 0, 256);
+    snprintf(buf, sizeof(buf), "ifconfig %s up", dev_name);
+    printf("run: %s\n", buf);
+    system(buf);
+}
 
 int tap_read(int fd, char *buf, int len) { return read(fd, buf, len); }
 

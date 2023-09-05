@@ -30,8 +30,9 @@ struct client_s {
     // char iv[IV_LEN + 1];
 };
 
-client_t *init_client(char *server_ip, uint16_t server_port, char *key, char *iv) {
-    if (server_ip == NULL || server_port <= 0 || key == NULL || iv == NULL) {
+client_t *init_client(char *server_ip, uint16_t server_port, char *key, char *iv, char *tuntap_ip, char *tuntap_mask) {
+    if (server_ip == NULL || server_port <= 0 || key == NULL || iv == NULL || tuntap_ip == NULL ||
+        tuntap_mask == NULL) {
         return NULL;
     }
 
@@ -43,6 +44,8 @@ client_t *init_client(char *server_ip, uint16_t server_port, char *key, char *iv
         LOG_E("open tap error");
         return NULL;
     }
+
+    tap_setup(dev_name, tuntap_ip, tuntap_mask);
 
     LOG_D("open tap ok %d %s", tapfd, dev_name);
 
