@@ -42,16 +42,16 @@ int tap_open(char *dev_name, int name_len) {
 
 void tap_setup(char *dev_name, char *dev_ip, char *dev_mask) {
     char buf[256] = {0};
-    // snprintf(buf, sizeof(buf), "ip addr add %s/24 dev %s", dev_ip, dev_name);
-    // printf("run: %s\n", buf);
-    // system(buf);
+/*     snprintf(buf, sizeof(buf), "ip addr add %s/24 dev %s", dev_ip, dev_name);
+    printf("run: %s\n", buf);
+    system(buf);
 
-    // memset(buf, 0, 256);
+    memset(buf, 0, 256); */
     snprintf(buf, sizeof(buf), "ifconfig %s %s netmask %s", dev_name, dev_ip, dev_mask);
     printf("run: %s\n", buf);
     system(buf);
 
-    // ifconfig mtu 1400
+    /* ifconfig mtu 1400 */
     memset(buf, 0, 256);
     snprintf(buf, sizeof(buf), "ifconfig %s mtu 1400", dev_name);
     printf("run: %s\n", buf);

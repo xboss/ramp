@@ -9,4 +9,4 @@ server_t *init_server(char *bind_ip, uint16_t port, char *key, char *iv);
 void run_server(server_t *server);
 void free_server(server_t *server);
 
-#endif  // SERVER_H
+#endif  /* SERVER_H */

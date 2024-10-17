@@ -2,81 +2,85 @@
 
 #include <assert.h>
 #include <openssl/aes.h>
+#include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
-#include "common.h"
-
-inline static unsigned char *str2hex(const char *str) {
-    unsigned char *ret = NULL;
-    int str_len = strlen(str);
-    int i = 0;
-    assert((str_len % 2) == 0);
-    ret = malloc(str_len / 2);
-    for (i = 0; i < str_len; i = i + 2) {
-        sscanf(str + i, "%2hhx", &ret[i / 2]);
+static const int align_size = AES_BLOCK_SIZE;
+static char *pkcs7_padding(const char *in, int in_len, int *out_len) {
+    int remainder = in_len % align_size;
+    int padding_size = remainder == 0 ? align_size : align_size - remainder;
+    *out_len = in_len + padding_size;
+    char *out = (char *)malloc(*out_len);
+    if (!out) {
+        perror("alloc error");
+        return NULL;
     }
-    return ret;
+    memcpy(out, in, in_len);
+    memset(out + in_len, padding_size, padding_size);
+    return out;
 }
 
-inline static char *cipher_padding(const char *buf, int size, int *final_size) {
-    char *ret = NULL;
-    int padding_size = AES_BLOCK_SIZE - (size % AES_BLOCK_SIZE);
-    *final_size = size + padding_size;
-    ret = _ALLOC(char, *final_size);
-    memcpy(ret, buf, size);
-    assert(size < *final_size);
-    return ret;
+static int pkcs7_unpadding(const char *in, int in_len) {
+    char padding_size = in[in_len - 1];
+    return (int)padding_size;
 }
 
-inline static void aes_cbc_encrpyt(const char *raw_buf, char **encrpy_buf, int len, const char *key, const char *iv) {
+void pwd2key(char *key, int ken_len, const char *pwd, int pwd_len) {
+    int i;
+    int sum = 0;
+    for (i = 0; i < pwd_len; i++) {
+        sum += pwd[i];
+    }
+    int avg = sum / pwd_len;
+    for (i = 0; i < ken_len; i++) {
+        key[i] = pwd[i % pwd_len] ^ avg;
+    }
+}
+
+char *aes_encrypt(const char *key, const char *in, int in_len, int *out_len) {
+    if (!key || !in || in_len <= 0) {
+        return NULL;
+    }
     AES_KEY aes_key;
-    unsigned char *skey = str2hex(key);
-    unsigned char *siv = str2hex(iv);
-    AES_set_encrypt_key(skey, 128, &aes_key);
-    AES_cbc_encrypt((unsigned char *)raw_buf, (unsigned char *)*encrpy_buf, len, &aes_key, siv, AES_ENCRYPT);
-    _FREE_IF(skey);
-    _FREE_IF(siv);
+    if (AES_set_encrypt_key((const unsigned char *)key, 128, &aes_key) < 0) {
+        return NULL;
+    }
+    char *out = pkcs7_padding(in, in_len, out_len);
+    char *pi = out;
+    char *po = out;
+    int en_len = 0;
+    while (en_len < *out_len) {
+        AES_encrypt((unsigned char *)pi, (unsigned char *)po, &aes_key);
+        pi += AES_BLOCK_SIZE;
+        po += AES_BLOCK_SIZE;
+        en_len += AES_BLOCK_SIZE;
+    }
+    return out;
 }
-inline static void aes_cbc_decrypt(const char *raw_buf, char **encrpy_buf, int len, const char *key, const char *iv) {
+
+char *aes_decrypt(const char *key, const char *in, int in_len, int *out_len) {
+    if (!key || !in || in_len <= 0) {
+        return NULL;
+    }
     AES_KEY aes_key;
-    unsigned char *skey = str2hex(key);
-    unsigned char *siv = str2hex(iv);
-    AES_set_decrypt_key(skey, 128, &aes_key);
-    AES_cbc_encrypt((unsigned char *)raw_buf, (unsigned char *)*encrpy_buf, len, &aes_key, siv, AES_DECRYPT);
-    _FREE_IF(skey);
-    _FREE_IF(siv);
-}
-
-char *aes_encrypt(const char *key, const char *iv, const char *in, int in_len, int *out_len) {
-    int padding_size = in_len;
-    char *after_padding_buf = (char *)in;
-    if (in_len % 16 != 0) {
-        after_padding_buf = cipher_padding(in, in_len, &padding_size);
+    if (AES_set_decrypt_key((const unsigned char *)key, 128, &aes_key) < 0) {
+        return NULL;
     }
-    *out_len = padding_size;
-
-    char *out_buf = malloc(padding_size);
-    memset(out_buf, 0, padding_size);
-    aes_cbc_encrpyt(after_padding_buf, &out_buf, padding_size, key, iv);
-    if (in_len % 16 != 0) {
-        _FREE_IF(after_padding_buf);
+    char *out = malloc(in_len);
+    if (!out) {
+        perror("alloc error");
+        return NULL;
     }
-    return out_buf;
-}
-
-char *aes_decrypt(const char *key, const char *iv, const char *in, int in_len, int *out_len) {
-    int padding_size = in_len;
-    char *after_padding_buf = (char *)in;
-    if (in_len % 16 != 0) {
-        after_padding_buf = cipher_padding(in, in_len, &padding_size);
+    memset(out, 0, in_len);
+    char *po = out;
+    int en_len = 0;
+    while (en_len < in_len) {
+        AES_decrypt((unsigned char *)in, (unsigned char *)po, &aes_key);
+        in += AES_BLOCK_SIZE;
+        po += AES_BLOCK_SIZE;
+        en_len += AES_BLOCK_SIZE;
     }
-    *out_len = padding_size;
-
-    char *out_buf = malloc(padding_size);
-    memset(out_buf, 0, padding_size);
-    aes_cbc_decrypt(after_padding_buf, &out_buf, padding_size, key, iv);
-    if (in_len % 16 != 0) {
-        _FREE_IF(after_padding_buf);
-    }
-    return out_buf;
+    *out_len = in_len - pkcs7_unpadding(out, en_len);
+    return out;
 }

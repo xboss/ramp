@@ -9,31 +9,20 @@
 #include "common.h"
 #include "uthash.h"
 
-// // TODO: debug
-// static void _prx(const void *buf, int len) {
-//     const char *pb = buf;
-//     for (size_t i = 0; i < len; i++) {
-//         // unsigned char c = *pb;
-//         printf("%2X ", ((*pb) & 0xFF));
-//         pb++;
-//     }
-//     printf("\n");
-// }
-
-typedef struct {
-    u_char mac_addr[ETHER_ADDR_LEN];
+struct mac_talbe_s {
+    unsigned char mac_addr[ETHER_ADDR_LEN];
     struct sockaddr_in target_addr;
     UT_hash_handle hh;
-} mac_talbe_t;
+};
+typedef struct mac_talbe_s mac_talbe_t;
 
 struct server_s {
     int udpfd;
-    char *key;
-    char *iv;
-    mac_talbe_t *mac_talbe;
+    char* key;
+    mac_talbe_t* mac_talbe;
 };
 
-server_t *init_server(char *bind_ip, uint16_t port, char *key, char *iv) {
+server_t* init_server(char* bind_ip, uint16_t port, char* key, char* iv) {
     if (port <= 0 || key == NULL || iv == NULL) {
         return NULL;
     }
@@ -54,12 +43,12 @@ server_t *init_server(char *bind_ip, uint16_t port, char *key, char *iv) {
     }
     servaddr.sin_port = htons(port);
 
-    if (-1 == bind(udpfd, (struct sockaddr *)&servaddr, sizeof(servaddr))) {
+    if (-1 == bind(udpfd, (struct sockaddr*)&servaddr, sizeof(servaddr))) {
         close(udpfd);
         return NULL;
     }
 
-    server_t *server = _ALLOC(server_t, sizeof(server_t));
+    server_t* server = _ALLOC(server_t, sizeof(server_t));
     _IF_NULL(server) {
         LOG_E("%s", strerror(errno));
         return NULL;
@@ -73,7 +62,7 @@ server_t *init_server(char *bind_ip, uint16_t port, char *key, char *iv) {
     return server;
 }
 
-void free_server(server_t *server) {
+void free_server(server_t* server) {
     if (!server) {
         return;
     }
@@ -88,21 +77,21 @@ void free_server(server_t *server) {
     _FREE_IF(server);
 }
 
-void run_server(server_t *server) {
+void run_server(server_t* server) {
     char data[ETHER_MAX_LEN];
     int rlen = 0;
     int wlen = 0;
-    char *plain_txt = NULL;
+    char* plain_txt = NULL;
     int plain_txt_len = 0;
     // char *cipher_txt = NULL;
     // int cipher_txt_len = 0;
     struct sockaddr_in cli_addr;
     socklen_t addr_len;
-    struct ether_header *hdr = NULL;
-    mac_talbe_t *item = NULL;
-    mac_talbe_t *new_item = NULL;
-    mac_talbe_t *tmp = NULL;
-    mac_talbe_t *itr_item = NULL;
+    struct ether_header* hdr = NULL;
+    mac_talbe_t* item = NULL;
+    mac_talbe_t* new_item = NULL;
+    mac_talbe_t* tmp = NULL;
+    mac_talbe_t* itr_item = NULL;
     // mac_talbe_t key_tmp;
     // memset(&key_tmp, 0, sizeof(mac_talbe_t));
     u_char broadcast_addr[ETHER_ADDR_LEN];
@@ -113,7 +102,7 @@ void run_server(server_t *server) {
     memset(dst_mac, 0, sizeof(ETHER_ADDR_LEN));
     while (true) {
         addr_len = sizeof(cli_addr);
-        rlen = recvfrom(server->udpfd, data, sizeof(data), 0, (struct sockaddr *)&cli_addr, &addr_len);
+        rlen = recvfrom(server->udpfd, data, sizeof(data), 0, (struct sockaddr*)&cli_addr, &addr_len);
         if (rlen <= 0) {
             LOG_E("udp recv error %s", strerror(errno));
             continue;
@@ -122,10 +111,12 @@ void run_server(server_t *server) {
         // decrypt
         plain_txt = data;
         plain_txt_len = rlen;
-        _IF_STR_EMPTY(server->key) { plain_txt = aes_decrypt(server->key, server->iv, data, rlen, &plain_txt_len); }
+        _IF_STR_EMPTY(server->key) {
+            plain_txt = aes_decrypt(server->key, server->iv, data, rlen, &plain_txt_len);
+        }
         assert(plain_txt_len >= 14);
 
-        hdr = (struct ether_header *)plain_txt;
+        hdr = (struct ether_header*)plain_txt;
         memcpy(src_mac, hdr->ether_shost, ETHER_ADDR_LEN);
         memcpy(dst_mac, hdr->ether_dhost, ETHER_ADDR_LEN);
 
@@ -137,7 +128,9 @@ void run_server(server_t *server) {
         // // _prx(plain_txt, plain_txt_len);
         // LOG_D("---------");
 
-        _IF_STR_EMPTY(server->key) { _FREE_IF(plain_txt); }
+        _IF_STR_EMPTY(server->key) {
+            _FREE_IF(plain_txt);
+        }
 
         // if register self to mac table
         HASH_FIND(hh, server->mac_talbe, src_mac, sizeof(src_mac), item);
@@ -174,8 +167,7 @@ void run_server(server_t *server) {
         HASH_FIND(hh, server->mac_talbe, dst_mac, sizeof(dst_mac), item);
         if (item) {
             // LOG_D("find dst_mac");
-            wlen =
-                sendto(server->udpfd, data, rlen, 0, (struct sockaddr *)&item->target_addr, sizeof(item->target_addr));
+            wlen = sendto(server->udpfd, data, rlen, 0, (struct sockaddr*)&item->target_addr, sizeof(item->target_addr));
             if (wlen <= 0) {
                 LOG_E("send to client error %s", strerror(errno));
                 continue;
@@ -186,8 +178,7 @@ void run_server(server_t *server) {
             // broadcast
             // LOG_D("broadcast");
             HASH_ITER(hh, server->mac_talbe, itr_item, tmp) {
-                wlen = sendto(server->udpfd, data, rlen, 0, (struct sockaddr *)&itr_item->target_addr,
-                              sizeof(itr_item->target_addr));
+                wlen = sendto(server->udpfd, data, rlen, 0, (struct sockaddr*)&itr_item->target_addr, sizeof(itr_item->target_addr));
                 if (wlen <= 0) {
                     LOG_E("send to client error %s", strerror(errno));
                     // TODO:  continue;

@@ -33,7 +33,7 @@ int tap_open(char *dev_name, int name_len) {
     }
     fd = socket(PF_SYSTEM, SOCK_DGRAM, SYSPROTO_CONTROL);
 
-    // printf("ctl_name: %s\n", ctlInfo.ctl_name);
+    /* printf("ctl_name: %s\n", ctlInfo.ctl_name); */
 
     if (fd == -1) {
         perror("socket(SYSPROTO_CONTROL)");
@@ -57,9 +57,6 @@ int tap_open(char *dev_name, int name_len) {
         if (c_rt == 0) {
             break;
         }
-        // else {
-        //     perror("connect(AF_SYS_CONTROL)");
-        // }
     }
 
     if (i < 1 || i >= 255) {
@@ -93,7 +90,7 @@ void tap_setup(char *dev_name, char *dev_ip, char *dev_mask) {
     printf("run: %s\n", buf);
     system(buf);
 
-    // ifconfig utun5 mtu 1400
+    /* ifconfig utun5 mtu 1400 */
     memset(buf, 0, 256);
     snprintf(buf, sizeof(buf), "ifconfig %s mtu 1500", dev_name);
     printf("run: %s\n", buf);
@@ -117,7 +114,7 @@ int tap_read(int fd, char *buf, int len) {
 }
 
 int tap_write(int fd, char *buf, int len) {
-    u_int32_t type = htonl(AF_INET);  // IPV4
+    u_int32_t type = htonl(AF_INET);  /* IPV4 */
     struct iovec iv[2];
 
     iv[0].iov_base = &type;
@@ -131,8 +128,6 @@ int tap_write(int fd, char *buf, int len) {
     if (r <= sizeof(type)) return 0;
 
     return r - sizeof(type);
-
-    // return write(fd, buf, len);
 }
 
 #endif /* __APPLE__ */
